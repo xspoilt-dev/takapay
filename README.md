@@ -28,9 +28,9 @@ When a payment notification is intercepted or manually resent, Takapay POSTs a J
   "sender": "bKash",
   "amount": "11.00",
   "trx_id": "DFF9CF1S4T",
-  "raw_body": "You have received Tk 11.00 from 01776812230. Fee Tk 0.00. Balance Tk 2,507.76. TrxID DFF9CF1S4T at 15/06/2026 14:25",
+  "raw_body": "You have received Tk 11.00 from 01776812767. Fee Tk 0.00. Balance Tk 2,507.76. TrxID DFF9CF1S4T at 15/06/2026 14:25",
   "timestamp": "2026-06-15T14:25:40.495351",
-  "from": "01776812230"
+  "from": "01776812767"
 }
 ```
 
