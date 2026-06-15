@@ -5,7 +5,7 @@ plugins {
 }
 
 android {
-    namespace = "com.xspoilt.takapay.takapay"
+    namespace = "com.xspoilt.takapay"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -17,7 +17,7 @@ android {
 
     defaultConfig {
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "com.xspoilt.takapay.takapay"
+        applicationId = "com.xspoilt.takapay"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion

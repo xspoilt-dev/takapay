@@ -1,4 +1,4 @@
-package com.xspoilt.takapay.takapay
+package com.xspoilt.takapay
 
 import android.content.BroadcastReceiver
 import android.content.Context

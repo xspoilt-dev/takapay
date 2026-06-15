@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:notification_listener_service/notification_listener_service.dart';
 import '../services/background_service.dart';
@@ -20,20 +21,33 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _requestPermissions() async {
-    await [
-      Permission.sms,
-      Permission.ignoreBatteryOptimizations,
-      Permission.notification,
-    ].request();
+    try {
+      await [
+        Permission.sms,
+        Permission.ignoreBatteryOptimizations,
+        Permission.notification,
+      ].request();
+    } catch (e) {
+      debugPrint("Standard permission request error: $e");
+    }
 
     // Check & request notification listener permission
-    bool isGranted = await NotificationListenerService.isPermissionGranted();
-    if (!isGranted) {
-      await NotificationListenerService.requestPermission();
+    try {
+      bool isGranted = await NotificationListenerService.isPermissionGranted();
+      if (!isGranted) {
+        const platform = MethodChannel('com.xspoilt.takapay/sms');
+        await platform.invokeMethod('requestNotificationListenerPermission');
+      }
+    } catch (e) {
+      debugPrint("NotificationListenerService permission error: $e");
     }
 
     // Safely initialize the background service after granting notification permissions
-    await initializeService();
+    try {
+      await initializeService();
+    } catch (e) {
+      debugPrint("Error initializing background service: $e");
+    }
   }
 
   @override

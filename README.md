@@ -30,9 +30,21 @@ When a payment notification is intercepted or manually resent, Takapay POSTs a J
   "trx_id": "DFF9CF1S4T",
   "raw_body": "You have received Tk 11.00 from 01776812767. Fee Tk 0.00. Balance Tk 2,507.76. TrxID DFF9CF1S4T at 15/06/2026 14:25",
   "timestamp": "2026-06-15T14:25:40.495351",
-  "from": "01776812767"
+  "from": "01776812767",
+  "secret": "d34f07a2c1143de89b03ff826c7104b9"
 }
 ```
+
+## 🔒 Webhook Verification & Security
+
+To ensure that the webhook requests received by your server genuinely originate from this Takapay application:
+
+1. A unique, secure random secret token is automatically generated on your device.
+2. This token is transmitted with every webhook request (including connection tests) in two places:
+   - **HTTP Header**: `X-Webhook-Secret: <your_secret>`
+   - **JSON Payload Body**: `"secret": "<your_secret>"`
+
+You should configure your server to extract either the header or the JSON field and compare it against the token displayed in the app's **Settings** tab. If they match, the request is authentic.
 
 ---
 

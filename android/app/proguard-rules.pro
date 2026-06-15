@@ -12,7 +12,7 @@
 -keep class notification.listener.service.** { *; }
 
 # Keep database helpers
--keep class com.xspoilt.takapay.takapay.** { *; }
+-keep class com.xspoilt.takapay.** { *; }
 
 # Suppress R8 missing class warnings (very common in Flutter packages)
 -dontwarn io.flutter.embedding.engine.deferredcomponents.**
