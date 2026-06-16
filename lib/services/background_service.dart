@@ -1,14 +1,20 @@
 import 'dart:async';
 import 'dart:ui';
-import 'package:flutter/services.dart';
 import 'package:flutter_background_service/flutter_background_service.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'package:notification_listener_service/notification_listener_service.dart';
-import 'database_helper.dart';
-import 'webhook_service.dart';
-import '../utils/sms_parser.dart';
-import '../models/transaction_record.dart';
 
+/// Background service entry point.
+/// 
+/// IMPORTANT: This runs in a SEPARATE Dart isolate. EventChannel-based plugins
+/// (like notification_listener_service) do NOT work here because their native
+/// side is only registered with the main Flutter engine.
+/// 
+/// This service only handles:
+/// - Keeping the app alive with a foreground notification
+/// - Responding to start/stop commands
+/// 
+/// Actual notification listening is handled by NotificationHandler in the 
+/// main isolate (see notification_handler.dart).
 @pragma('vm:entry-point')
 void onStart(ServiceInstance service) async {
   DartPluginRegistrant.ensureInitialized();
@@ -33,43 +39,19 @@ void onStart(ServiceInstance service) async {
     service.stopSelf();
   });
 
-  // Listen for system notifications
-  NotificationListenerService.notificationsStream.listen((event) async {
-    if (event.hasRemoved == true) return;
-
-    final String packageName = event.packageName ?? "";
-    final String title = event.title ?? "";
-    final String body = event.content ?? "";
-
-    print("Background Notification received: package=$packageName, title=$title, body=$body");
-
-    // Treat title as the sender and content as the body of the message
-    await _handleSms(title, body);
+  // Periodic keepalive - update notification to show service is running
+  Timer.periodic(const Duration(minutes: 5), (timer) async {
+    if (service is AndroidServiceInstance) {
+      if (await service.isForegroundService()) {
+        service.setForegroundNotificationInfo(
+          title: 'Takapay Active',
+          content: 'Listening for payment notifications in background',
+        );
+      }
+    }
   });
 
-  print("Background service started and listening for system notifications");
-}
-
-Future<void> _handleSms(String sender, String body) async {
-  print("SMS Received: from $sender, body: $body");
-
-  final record = SMSParser.parse(sender, body);
-  if (record != null) {
-    final String? errorReason = await WebhookService.sendPayload(record);
-    final bool success = errorReason == null;
-    
-    final finalRecord = TransactionRecord(
-      sender: record.sender,
-      amount: record.amount,
-      trxId: record.trxId,
-      rawBody: record.rawBody,
-      timestamp: record.timestamp,
-      status: success ? 'SUCCESS' : 'FAILED',
-      errorMessage: errorReason,
-    );
-
-    await DatabaseHelper.instance.insertTransaction(finalRecord);
-  }
+  print("Background service started (foreground notification only)");
 }
 
 Future<void> initializeService() async {
