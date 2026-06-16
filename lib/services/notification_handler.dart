@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:notification_listener_service/notification_listener_service.dart';
 import 'database_helper.dart';
 import 'webhook_service.dart';
+import 'debug_logger.dart';
 import '../utils/sms_parser.dart';
 import '../models/transaction_record.dart';
 
@@ -15,6 +16,7 @@ class NotificationHandler {
   static NotificationHandler? _instance;
   static StreamSubscription? _subscription;
   static bool _isListening = false;
+  static final _debug = DebugLogger.instance;
 
   NotificationHandler._();
 
@@ -27,37 +29,56 @@ class NotificationHandler {
   /// Must be called from the main Flutter engine (e.g., in main() or a widget).
   void startListening() {
     if (_isListening) {
-      debugPrint('NotificationHandler: Already listening, skipping duplicate start');
+      _debug.log('LISTENER', 'Already listening, skipping duplicate start');
       return;
     }
 
     _isListening = true;
-    debugPrint('NotificationHandler: Starting notification listener from main isolate');
+    _debug.listenerStarted = true;
+    _debug.serviceStartTime = DateTime.now();
+    _debug.log('LISTENER', '🟢 Starting notification listener from main isolate');
 
     try {
       _subscription = NotificationListenerService.notificationsStream.listen(
         (event) async {
-          if (event.hasRemoved == true) return;
+          _debug.listenerStreamActive = true;
+          _debug.totalNotificationsReceived++;
+          _debug.lastNotificationTime = DateTime.now();
+          _debug.lastNotificationPackage = event.packageName ?? 'unknown';
+
+          if (event.hasRemoved == true) {
+            _debug.log('NOTIFICATION', '🗑️ Notification removed (ignored) - pkg=${event.packageName}');
+            return;
+          }
 
           final String packageName = event.packageName ?? "";
           final String title = event.title ?? "";
           final String body = event.content ?? "";
 
-          debugPrint("NotificationHandler: Received notification - package=$packageName, title=$title, body=$body");
+          _debug.log('NOTIFICATION', '📩 Received: pkg=$packageName, title=$title, body=${body.length > 100 ? '${body.substring(0, 100)}...' : body}');
 
           await _handleNotification(title, body);
         },
         onError: (error) {
-          debugPrint('NotificationHandler: Stream error: $error');
+          _debug.log('LISTENER', '❌ Stream ERROR: $error', isError: true);
+          _debug.lastError = 'Stream error: $error';
+          _debug.listenerStreamActive = false;
           _isListening = false;
         },
         onDone: () {
-          debugPrint('NotificationHandler: Stream done');
+          _debug.log('LISTENER', '⚠️ Stream DONE (closed unexpectedly)', isError: true);
+          _debug.lastError = 'Stream closed';
+          _debug.listenerStreamActive = false;
           _isListening = false;
         },
+        cancelOnError: false,
       );
+      _debug.log('LISTENER', '✅ Stream subscription created successfully');
+      _debug.listenerStreamActive = true;
     } catch (e) {
-      debugPrint('NotificationHandler: Failed to start listening: $e');
+      _debug.log('LISTENER', '❌ FAILED to create stream: $e', isError: true);
+      _debug.lastError = 'Failed to start: $e';
+      _debug.listenerStreamActive = false;
       _isListening = false;
     }
   }
@@ -67,31 +88,59 @@ class NotificationHandler {
     _subscription?.cancel();
     _subscription = null;
     _isListening = false;
-    debugPrint('NotificationHandler: Stopped listening');
+    _debug.listenerStarted = false;
+    _debug.listenerStreamActive = false;
+    _debug.log('LISTENER', '🔴 Stopped listening');
   }
 
   bool get isListening => _isListening;
 
   static Future<void> _handleNotification(String sender, String body) async {
-    debugPrint("NotificationHandler: Processing - sender=$sender, body=$body");
+    _debug.log('PARSER', '🔍 Parsing - sender=$sender');
 
-    final record = SMSParser.parse(sender, body);
-    if (record != null) {
-      final String? errorReason = await WebhookService.sendPayload(record);
-      final bool success = errorReason == null;
+    try {
+      final record = SMSParser.parse(sender, body);
+      if (record != null) {
+        _debug.totalNotificationsParsed++;
+        _debug.log('PARSER', '✅ Parsed transaction: ${record.sender} - ${record.amount} TK - TrxID: ${record.trxId}');
 
-      final finalRecord = TransactionRecord(
-        sender: record.sender,
-        amount: record.amount,
-        trxId: record.trxId,
-        rawBody: record.rawBody,
-        timestamp: record.timestamp,
-        status: success ? 'SUCCESS' : 'FAILED',
-        errorMessage: errorReason,
-      );
+        try {
+          final String? errorReason = await WebhookService.sendPayload(record);
+          final bool success = errorReason == null;
 
-      await DatabaseHelper.instance.insertTransaction(finalRecord);
-      debugPrint("NotificationHandler: Transaction saved - trxId=${record.trxId}, success=$success");
+          if (success) {
+            _debug.totalWebhooksSent++;
+            _debug.log('WEBHOOK', '✅ Webhook sent successfully for TrxID: ${record.trxId}');
+          } else {
+            _debug.totalWebhooksFailed++;
+            _debug.lastError = 'Webhook: $errorReason';
+            _debug.log('WEBHOOK', '❌ Webhook failed: $errorReason', isError: true);
+          }
+
+          final finalRecord = TransactionRecord(
+            sender: record.sender,
+            amount: record.amount,
+            trxId: record.trxId,
+            rawBody: record.rawBody,
+            timestamp: record.timestamp,
+            status: success ? 'SUCCESS' : 'FAILED',
+            errorMessage: errorReason,
+          );
+
+          await DatabaseHelper.instance.insertTransaction(finalRecord);
+          _debug.log('DATABASE', '💾 Transaction saved to DB');
+        } catch (e) {
+          _debug.totalWebhooksFailed++;
+          _debug.lastError = 'Webhook exception: $e';
+          _debug.log('WEBHOOK', '❌ Exception sending webhook: $e', isError: true);
+        }
+      } else {
+        _debug.totalParseSkipped++;
+        _debug.log('PARSER', '⏭️ Not a payment notification (no match) - sender=$sender');
+      }
+    } catch (e) {
+      _debug.log('PARSER', '❌ Parse exception: $e', isError: true);
+      _debug.lastError = 'Parse error: $e';
     }
   }
 }

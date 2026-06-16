@@ -6,6 +6,7 @@ import '../services/background_service.dart';
 import '../services/notification_handler.dart';
 import 'history_tab.dart';
 import 'settings_tab.dart';
+import 'debug_tab.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -64,7 +65,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
-      length: 2,
+      length: 3,
       child: Scaffold(
         appBar: AppBar(
           leading: const Padding(
@@ -85,6 +86,7 @@ class _HomeScreenState extends State<HomeScreen> {
             tabs: [
               Tab(icon: Icon(Icons.history), text: 'History'),
               Tab(icon: Icon(Icons.settings), text: 'Settings'),
+              Tab(icon: Icon(Icons.bug_report), text: 'Debug'),
             ],
           ),
         ),
@@ -92,6 +94,7 @@ class _HomeScreenState extends State<HomeScreen> {
           children: [
             HistoryTab(),
             SettingsTab(),
+            DebugTab(),
           ],
         ),
       ),
