@@ -137,7 +137,8 @@ class _DebugTabState extends State<DebugTab> {
 
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
-      body: Column(
+      body: ListView(
+        padding: EdgeInsets.zero,
         children: [
           // Elegant Header Status Cards
           Container(
@@ -193,6 +194,40 @@ class _DebugTabState extends State<DebugTab> {
                     Expanded(child: _statusCard('Daemon Process', _bgServiceRunning, Icons.run_circle_outlined)),
                   ],
                 ),
+
+                if (_debug.lastError != null && _debug.lastError!.isNotEmpty) ...[
+                  const SizedBox(height: 10),
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: Colors.red.shade50,
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(color: Colors.red.shade200),
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Icon(Icons.error_outline_rounded, color: Colors.red, size: 16),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: SelectableText(
+                            'Error: ${_debug.lastError}',
+                            style: TextStyle(fontSize: 11, color: Colors.red.shade900, fontFamily: 'monospace'),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        GestureDetector(
+                          onTap: () {
+                            setState(() {
+                              _debug.lastError = null;
+                            });
+                          },
+                          child: const Icon(Icons.close, size: 14, color: Colors.red),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
 
                 // Background Keep-Alive Helper Box
                 if (_showGuide) ...[
@@ -349,19 +384,21 @@ class _DebugTabState extends State<DebugTab> {
             ),
           ),
           // Log console entries
-          Expanded(
-            child: filteredLogs.isEmpty
-                ? _emptyStateView()
-                : ListView.builder(
-                    padding: const EdgeInsets.only(bottom: 24),
-                    reverse: true,
-                    itemCount: filteredLogs.length,
-                    itemBuilder: (context, index) {
-                      final log = filteredLogs[filteredLogs.length - 1 - index];
-                      return _logTile(log);
-                    },
-                  ),
-          ),
+          filteredLogs.isEmpty
+              ? Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 48.0),
+                  child: _emptyStateView(),
+                )
+              : ListView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  padding: const EdgeInsets.only(bottom: 24),
+                  itemCount: filteredLogs.length,
+                  itemBuilder: (context, index) {
+                    final log = filteredLogs[index];
+                    return _logTile(log);
+                  },
+                ),
         ],
       ),
     );
@@ -549,12 +586,15 @@ class _DebugTabState extends State<DebugTab> {
   }
 
   String _stripEmojis(String input) {
-    // Regex for matching emojis and common symbol markers used previously
-    final emojiPattern = RegExp(
-      r'[\u{1F600}-\u{1F64F}]|[\u{1F300}-\u{1F5FF}]|[\u{1F680}-\u{1F6FF}]|[\u{1F1E0}-\u{1F1FF}]|[\u{2700}-\u{27BF}]|[\u{1F900}-\u{1F9FF}]|[\u{1F018}-\u{1F0F5}]|[\u{1F004}]|[\u{1F170}-\u{1F0C0}]|[\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\u{1F100}-\u{1F1FF}]|[\u{25AA}-\u{25AB}]|[\u{25B6}]|[\u{25C0}]|[\u{25FB}-\u{25FE}]|[\u{2B05}-\u{2B07}]|[\u{2B1B}-\u{2B1C}]|[\u{2B50}]|[\u{2B55}]|[\u{3030}]|[\u{303D}]|[\u{3297}]|[\u{3299}]|[\u{23E9}-\u{23EF}]|[\u{23F0}]|[\u{23F3}]',
-      unicode: true,
-    );
-    return input.replaceAll(emojiPattern, '').trim();
+    try {
+      final emojiPattern = RegExp(
+        r'[\u{1F600}-\u{1F64F}]|[\u{1F300}-\u{1F5FF}]|[\u{1F680}-\u{1F6FF}]|[\u{1F1E0}-\u{1F1FF}]|[\u{2700}-\u{27BF}]|[\u{1F900}-\u{1F9FF}]|[\u{1F018}-\u{1F0F5}]|[\u{1F004}]|[\u{1F170}-\u{1F0C0}]|[\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\u{1F100}-\u{1F1FF}]|[\u{25AA}-\u{25AB}]|[\u{25B6}]|[\u{25C0}]|[\u{25FB}-\u{25FE}]|[\u{2B05}-\u{2B07}]|[\u{2B1B}-\u{2B1C}]|[\u{2B50}]|[\u{2B55}]|[\u{3030}]|[\u{303D}]|[\u{3297}]|[\u{3299}]|[\u{23E9}-\u{23EF}]|[\u{23F0}]|[\u{23F3}]',
+        unicode: true,
+      );
+      return input.replaceAll(emojiPattern, '').trim();
+    } catch (e) {
+      return input;
+    }
   }
 
   Widget _emptyStateView() {

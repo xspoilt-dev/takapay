@@ -92,26 +92,83 @@ CREATE TABLE IF NOT EXISTS debug_logs (
 
   // Debug Logs methods
   Future<int> insertDebugLog(String category, String message, {bool isError = false}) async {
-    final db = await instance.database;
-    return await db.insert('debug_logs', {
-      'timestamp': DateTime.now().toIso8601String(),
-      'category': category,
-      'message': message,
-      'is_error': isError ? 1 : 0,
-    });
+    try {
+      final db = await instance.database;
+      return await db.insert('debug_logs', {
+        'timestamp': DateTime.now().toIso8601String(),
+        'category': category,
+        'message': message,
+        'is_error': isError ? 1 : 0,
+      });
+    } catch (e) {
+      print('DatabaseHelper insertDebugLog error: $e');
+      if (e.toString().contains('no such table')) {
+        try {
+          final db = await instance.database;
+          await db.execute('''
+            CREATE TABLE IF NOT EXISTS debug_logs (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              timestamp TEXT NOT NULL,
+              category TEXT NOT NULL,
+              message TEXT NOT NULL,
+              is_error INTEGER NOT NULL DEFAULT 0
+            )
+          ''');
+          return await db.insert('debug_logs', {
+            'timestamp': DateTime.now().toIso8601String(),
+            'category': category,
+            'message': message,
+            'is_error': isError ? 1 : 0,
+          });
+        } catch (innerEx) {
+          print('Failed to create debug_logs table on insert: $innerEx');
+        }
+      }
+      return 0;
+    }
   }
 
   Future<List<Map<String, dynamic>>> getDebugLogs({int limit = 200}) async {
-    final db = await instance.database;
-    return await db.query(
-      'debug_logs',
-      orderBy: 'timestamp DESC',
-      limit: limit,
-    );
+    try {
+      final db = await instance.database;
+      return await db.query(
+        'debug_logs',
+        orderBy: 'timestamp DESC',
+        limit: limit,
+      );
+    } catch (e) {
+      print('DatabaseHelper getDebugLogs error: $e');
+      if (e.toString().contains('no such table')) {
+        try {
+          final db = await instance.database;
+          await db.execute('''
+            CREATE TABLE IF NOT EXISTS debug_logs (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              timestamp TEXT NOT NULL,
+              category TEXT NOT NULL,
+              message TEXT NOT NULL,
+              is_error INTEGER NOT NULL DEFAULT 0
+            )
+          ''');
+          return await db.query(
+            'debug_logs',
+            orderBy: 'timestamp DESC',
+            limit: limit,
+          );
+        } catch (innerEx) {
+          print('Failed to create debug_logs table on query: $innerEx');
+        }
+      }
+      return [];
+    }
   }
 
   Future<void> clearDebugLogs() async {
-    final db = await instance.database;
-    await db.delete('debug_logs');
+    try {
+      final db = await instance.database;
+      await db.delete('debug_logs');
+    } catch (e) {
+      print('DatabaseHelper clearDebugLogs error: $e');
+    }
   }
 }

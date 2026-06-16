@@ -70,7 +70,7 @@ class DebugLogger {
       // Load logs from DB
       final dbLogs = await DatabaseHelper.instance.getDebugLogs(limit: _maxLogs);
       _logs.clear();
-      for (final row in dbLogs.reversed) {
+      for (final row in dbLogs) {
         _logs.add(DebugLogEntry(
           timestamp: DateTime.parse(row['timestamp']),
           category: row['category'],
@@ -80,6 +80,8 @@ class DebugLogger {
       }
       _notifyListeners();
     } catch (e) {
+      lastError = 'Load error: $e';
+      _notifyListeners();
       print('DebugLogger: Error loading persisted state: $e');
     }
   }
@@ -91,9 +93,9 @@ class DebugLogger {
       message: message,
       isError: isError,
     );
-    _logs.add(entry);
+    _logs.insert(0, entry);
     if (_logs.length > _maxLogs) {
-      _logs.removeAt(0);
+      _logs.removeLast();
     }
     _notifyListeners();
 
