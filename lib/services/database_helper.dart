@@ -20,8 +20,9 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 1,
+      version: 2,
       onCreate: _createDB,
+      onUpgrade: _onUpgrade,
     );
   }
 
@@ -38,6 +39,29 @@ CREATE TABLE transactions (
   error_message TEXT
 )
 ''');
+    await db.execute('''
+CREATE TABLE debug_logs (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  timestamp TEXT NOT NULL,
+  category TEXT NOT NULL,
+  message TEXT NOT NULL,
+  is_error INTEGER NOT NULL DEFAULT 0
+)
+''');
+  }
+
+  Future _onUpgrade(Database db, int oldVersion, int newVersion) async {
+    if (oldVersion < 2) {
+      await db.execute('''
+CREATE TABLE IF NOT EXISTS debug_logs (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  timestamp TEXT NOT NULL,
+  category TEXT NOT NULL,
+  message TEXT NOT NULL,
+  is_error INTEGER NOT NULL DEFAULT 0
+)
+''');
+    }
   }
 
   Future<int> insertTransaction(TransactionRecord record) async {
@@ -64,5 +88,30 @@ CREATE TABLE transactions (
   Future<void> clearHistory() async {
     final db = await instance.database;
     await db.delete('transactions');
+  }
+
+  // Debug Logs methods
+  Future<int> insertDebugLog(String category, String message, {bool isError = false}) async {
+    final db = await instance.database;
+    return await db.insert('debug_logs', {
+      'timestamp': DateTime.now().toIso8601String(),
+      'category': category,
+      'message': message,
+      'is_error': isError ? 1 : 0,
+    });
+  }
+
+  Future<List<Map<String, dynamic>>> getDebugLogs({int limit = 200}) async {
+    final db = await instance.database;
+    return await db.query(
+      'debug_logs',
+      orderBy: 'timestamp DESC',
+      limit: limit,
+    );
+  }
+
+  Future<void> clearDebugLogs() async {
+    final db = await instance.database;
+    await db.delete('debug_logs');
   }
 }

@@ -2,28 +2,27 @@ import 'dart:async';
 import 'dart:ui';
 import 'package:flutter_background_service/flutter_background_service.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'notification_handler.dart';
+import 'debug_logger.dart';
 
 /// Background service entry point.
 /// 
-/// IMPORTANT: This runs in a SEPARATE Dart isolate. EventChannel-based plugins
-/// (like notification_listener_service) do NOT work here because their native
-/// side is only registered with the main Flutter engine.
-/// 
-/// This service only handles:
-/// - Keeping the app alive with a foreground notification
-/// - Responding to start/stop commands
-/// 
-/// Actual notification listening is handled by NotificationHandler in the 
-/// main isolate (see notification_handler.dart).
+/// Runs in a separate Dart isolate, keeping the process alive 24/7.
+/// Listens to notifications in the background, parses them, sends webhooks,
+/// and saves transactions to sqlite database.
 @pragma('vm:entry-point')
 void onStart(ServiceInstance service) async {
   DartPluginRegistrant.ensureInitialized();
+
+  // Load persisted logs and state for this isolate
+  await DebugLogger.instance.loadFromPersisted();
+  DebugLogger.instance.log('SYSTEM', 'Background service isolate initialized');
 
   if (service is AndroidServiceInstance) {
     service.setAsForegroundService();
     service.setForegroundNotificationInfo(
       title: 'Takapay Active',
-      content: 'Listening for payment notifications in background',
+      content: 'Forwarding payment notifications in background',
     );
 
     service.on('setAsForeground').listen((event) {
@@ -39,19 +38,27 @@ void onStart(ServiceInstance service) async {
     service.stopSelf();
   });
 
+  // Start notification listener in this background isolate
+  try {
+    NotificationHandler.instance.startListening();
+    DebugLogger.instance.log('SYSTEM', 'Notification listener stream started in background isolate');
+  } catch (e) {
+    DebugLogger.instance.log('SYSTEM', 'Failed to start listener stream in background: $e', isError: true);
+  }
+
   // Periodic keepalive - update notification to show service is running
   Timer.periodic(const Duration(minutes: 5), (timer) async {
     if (service is AndroidServiceInstance) {
       if (await service.isForegroundService()) {
         service.setForegroundNotificationInfo(
           title: 'Takapay Active',
-          content: 'Listening for payment notifications in background',
+          content: 'Forwarding payment notifications in background',
         );
       }
     }
   });
 
-  print("Background service started (foreground notification only)");
+  print("Background service started and notification listener active");
 }
 
 Future<void> initializeService() async {

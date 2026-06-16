@@ -4,6 +4,7 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:notification_listener_service/notification_listener_service.dart';
 import '../services/background_service.dart';
 import '../services/notification_handler.dart';
+import '../services/debug_logger.dart';
 import 'history_tab.dart';
 import 'settings_tab.dart';
 import 'debug_tab.dart';
@@ -51,14 +52,12 @@ class _HomeScreenState extends State<HomeScreen> {
       debugPrint("Error initializing background service: $e");
     }
 
-    // Start notification listening from the MAIN isolate.
-    // The notification_listener_service plugin uses EventChannel which
-    // only works in the main Flutter engine, not in background isolates.
+    // Load persisted debug logs on startup
     try {
-      NotificationHandler.instance.startListening();
-      debugPrint('Notification listener started from main isolate');
+      await DebugLogger.instance.loadFromPersisted();
+      debugPrint('Persisted debug logs loaded successfully');
     } catch (e) {
-      debugPrint('Error starting notification listener: $e');
+      debugPrint('Error loading debug logs: $e');
     }
   }
 
