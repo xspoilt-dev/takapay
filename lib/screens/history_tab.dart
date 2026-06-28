@@ -1,8 +1,10 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../models/transaction_record.dart';
 import '../services/database_helper.dart';
 import '../services/webhook_service.dart';
+import '../services/notification_handler.dart';
 
 class HistoryTab extends StatefulWidget {
   const HistoryTab({super.key});
@@ -14,11 +16,23 @@ class HistoryTab extends StatefulWidget {
 class _HistoryTabState extends State<HistoryTab> {
   late Future<List<TransactionRecord>> _historyFuture;
   final Set<int> _retryingIds = {};
+  StreamSubscription? _refreshSubscription;
 
   @override
   void initState() {
     super.initState();
     _refreshHistory();
+    _refreshSubscription = NotificationHandler.onTransactionCaptured.stream.listen((_) {
+      if (mounted) {
+        _refreshHistory();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _refreshSubscription?.cancel();
+    super.dispose();
   }
 
   void _refreshHistory() {
@@ -69,6 +83,8 @@ class _HistoryTabState extends State<HistoryTab> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text('TrxID: ${record.trxId}'),
+                        if (record.senderNumber != null || _extractPhone(record.rawBody) != null)
+                          Text('From: ${record.senderNumber ?? _extractPhone(record.rawBody)}'),
                         Text(
                           DateFormat('dd MMM yyyy, hh:mm a').format(record.timestamp),
                           style: const TextStyle(fontSize: 12),
@@ -140,8 +156,35 @@ class _HistoryTabState extends State<HistoryTab> {
                     _detailRow('Transaction ID', record.trxId),
                     _detailRow('Time', DateFormat('dd MMM yyyy, hh:mm:ss a').format(record.timestamp)),
                     _detailRow('Status', record.status, color: isSuccess ? Colors.green : Colors.red),
-                    if (record.errorMessage != null)
-                      _detailRow('Webhook Delivery Logs', record.errorMessage!, isBold: true, color: Colors.red),
+                    if (record.errorMessage != null && record.errorMessage!.isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      const Text(
+                        'Webhook Delivery Status',
+                        style: TextStyle(color: Colors.grey, fontSize: 11),
+                      ),
+                      const SizedBox(height: 4),
+                      Container(
+                        width: double.maxFinite,
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: isSuccess ? Colors.green.shade50 : Colors.red.shade50,
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(
+                            color: isSuccess ? Colors.green.shade200 : Colors.red.shade200,
+                          ),
+                        ),
+                        child: Text(
+                          record.errorMessage!,
+                          style: TextStyle(
+                            fontSize: 11.5,
+                            height: 1.4,
+                            fontWeight: FontWeight.bold,
+                            fontFamily: 'monospace',
+                            color: isSuccess ? Colors.green.shade900 : Colors.red.shade900,
+                          ),
+                        ),
+                      ),
+                    ],
                     const Divider(),
                     const Text('Raw Notification Body:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
                     const SizedBox(height: 6),
@@ -172,8 +215,8 @@ class _HistoryTabState extends State<HistoryTab> {
                             });
 
                             // Retry sending to webhook
-                            final errorReason = await WebhookService.sendPayload(record);
-                            final bool retrySuccess = errorReason == null;
+                            final WebhookResult result = await WebhookService.sendPayload(record);
+                            final bool retrySuccess = result.isSuccess;
 
                             final updatedRecord = TransactionRecord(
                               id: record.id,
@@ -183,7 +226,8 @@ class _HistoryTabState extends State<HistoryTab> {
                               rawBody: record.rawBody,
                               timestamp: record.timestamp,
                               status: retrySuccess ? 'SUCCESS' : 'FAILED',
-                              errorMessage: errorReason,
+                              errorMessage: result.report,
+                              senderNumber: record.senderNumber,
                             );
 
                             await DatabaseHelper.instance.updateTransaction(updatedRecord);
@@ -205,7 +249,7 @@ class _HistoryTabState extends State<HistoryTab> {
                                 SnackBar(
                                   content: Text(retrySuccess
                                       ? 'Sent successfully to server!'
-                                      : 'Resend failed: $errorReason'),
+                                      : 'Resend failed. Check status below.'),
                                   backgroundColor: retrySuccess ? Colors.green : Colors.red,
                                 ),
                               );
@@ -249,6 +293,20 @@ class _HistoryTabState extends State<HistoryTab> {
         ],
       ),
     );
+  }
+
+  String? _extractPhone(String body) {
+    final fromPhoneRegex = RegExp(r'(?:from|by)\s*(?:\+?88)?(01[3-9]\d{8})', caseSensitive: false);
+    final fromPhoneMatch = fromPhoneRegex.firstMatch(body);
+    if (fromPhoneMatch != null) {
+      return fromPhoneMatch.group(1);
+    }
+    final phoneRegex = RegExp(r'\b(01[3-9]\d{8})\b');
+    final phoneMatch = phoneRegex.firstMatch(body);
+    if (phoneMatch != null) {
+      return phoneMatch.group(1);
+    }
+    return null;
   }
 }
 

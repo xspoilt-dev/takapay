@@ -7,6 +7,7 @@ class TransactionRecord {
   final DateTime timestamp;
   final String status; // 'SUCCESS', 'FAILED', 'PENDING'
   final String? errorMessage;
+  final String? senderNumber;
 
   TransactionRecord({
     this.id,
@@ -17,6 +18,7 @@ class TransactionRecord {
     required this.timestamp,
     required this.status,
     this.errorMessage,
+    this.senderNumber,
   });
 
   Map<String, dynamic> toMap() {
@@ -29,6 +31,7 @@ class TransactionRecord {
       'timestamp': timestamp.toIso8601String(),
       'status': status,
       'error_message': errorMessage,
+      'sender_number': senderNumber,
     };
   }
 
@@ -42,6 +45,7 @@ class TransactionRecord {
       timestamp: DateTime.parse(map['timestamp']),
       status: map['status'],
       errorMessage: map['error_message'],
+      senderNumber: map['sender_number'],
     );
   }
 }

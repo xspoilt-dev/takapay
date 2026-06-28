@@ -6,6 +6,7 @@ import '../services/background_service.dart';
 import '../services/notification_handler.dart';
 import '../services/debug_logger.dart';
 import 'history_tab.dart';
+import 'analytics_tab.dart';
 import 'settings_tab.dart';
 import 'debug_tab.dart';
 
@@ -20,7 +21,17 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
+    _setupMethodChannel();
     _requestPermissions();
+  }
+
+  void _setupMethodChannel() {
+    const platform = MethodChannel('com.xspoilt.takapay/sms');
+    platform.setMethodCallHandler((call) async {
+      if (call.method == 'onTransactionProcessed') {
+        NotificationHandler.onTransactionCaptured.add(null);
+      }
+    });
   }
 
   Future<void> _requestPermissions() async {
@@ -64,7 +75,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
-      length: 3,
+      length: 4,
       child: Scaffold(
         appBar: AppBar(
           leading: const Padding(
@@ -83,15 +94,17 @@ class _HomeScreenState extends State<HomeScreen> {
             labelColor: Colors.white,
             unselectedLabelColor: Colors.white70,
             tabs: [
-              Tab(icon: Icon(Icons.history), text: 'History'),
-              Tab(icon: Icon(Icons.settings), text: 'Settings'),
-              Tab(icon: Icon(Icons.bug_report), text: 'Debug'),
+              Tab(icon: Icon(Icons.history_rounded), text: 'History'),
+              Tab(icon: Icon(Icons.analytics_rounded), text: 'Analytics'),
+              Tab(icon: Icon(Icons.settings_rounded), text: 'Settings'),
+              Tab(icon: Icon(Icons.bug_report_rounded), text: 'Debug'),
             ],
           ),
         ),
         body: const TabBarView(
           children: [
             HistoryTab(),
+            AnalyticsTab(),
             SettingsTab(),
             DebugTab(),
           ],

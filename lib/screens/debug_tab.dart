@@ -137,267 +137,271 @@ class _DebugTabState extends State<DebugTab> {
 
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
-      body: ListView(
-        padding: EdgeInsets.zero,
-        children: [
+      body: CustomScrollView(
+        slivers: [
           // Elegant Header Status Cards
-          Container(
-            padding: const EdgeInsets.all(12.0),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.02),
-                  blurRadius: 10,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Row(
-                      children: [
-                        Icon(Icons.dashboard_customize_rounded, color: Colors.blue, size: 20),
-                        SizedBox(width: 8),
-                        Text(
-                          'Service Diagnostics',
-                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, letterSpacing: 0.2),
-                        ),
-                      ],
-                    ),
-                    Row(
-                      children: [
-                        IconButton(
-                          icon: Icon(_checkingStatus ? Icons.refresh : Icons.autorenew_rounded, color: Colors.blueGrey, size: 20),
-                          tooltip: 'Reload Status',
-                          onPressed: _checkingStatus ? null : () => _checkAllStatus(),
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.delete_sweep_rounded, color: Colors.redAccent, size: 20),
-                          tooltip: 'Clear Debug History',
-                          onPressed: () => _confirmClearLogs(),
-                        ),
-                      ],
-                    )
-                  ],
-                ),
-                const SizedBox(height: 4),
-                // Components Status Badges
-                Row(
-                  children: [
-                    Expanded(child: _statusCard('System Access', _permissionGranted, Icons.key_rounded)),
-                    const SizedBox(width: 8),
-                    Expanded(child: _statusCard('Daemon Process', _bgServiceRunning, Icons.run_circle_outlined)),
-                  ],
-                ),
-
-                if (_debug.lastError != null && _debug.lastError!.isNotEmpty) ...[
-                  const SizedBox(height: 10),
-                  Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: Colors.red.shade50,
-                      borderRadius: BorderRadius.circular(6),
-                      border: Border.all(color: Colors.red.shade200),
-                    ),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Icon(Icons.error_outline_rounded, color: Colors.red, size: 16),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: SelectableText(
-                            'Error: ${_debug.lastError}',
-                            style: TextStyle(fontSize: 11, color: Colors.red.shade900, fontFamily: 'monospace'),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        GestureDetector(
-                          onTap: () {
-                            setState(() {
-                              _debug.lastError = null;
-                            });
-                          },
-                          child: const Icon(Icons.close, size: 14, color: Colors.red),
-                        ),
-                      ],
-                    ),
+          SliverToBoxAdapter(
+            child: Container(
+              padding: const EdgeInsets.all(12.0),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.02),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
                   ),
                 ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Row(
+                        children: [
+                          Icon(Icons.dashboard_customize_rounded, color: Colors.blue, size: 20),
+                          SizedBox(width: 8),
+                          Text(
+                            'Service Diagnostics',
+                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, letterSpacing: 0.2),
+                          ),
+                        ],
+                      ),
+                      Row(
+                        children: [
+                          IconButton(
+                            icon: Icon(_checkingStatus ? Icons.refresh : Icons.autorenew_rounded, color: Colors.blueGrey, size: 20),
+                            tooltip: 'Reload Status',
+                            onPressed: _checkingStatus ? null : () => _checkAllStatus(),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.delete_sweep_rounded, color: Colors.redAccent, size: 20),
+                            tooltip: 'Clear Debug History',
+                            onPressed: () => _confirmClearLogs(),
+                          ),
+                        ],
+                      )
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  // Components Status Badges
+                  Row(
+                    children: [
+                      Expanded(child: _statusCard('System Access', _permissionGranted, Icons.key_rounded)),
+                      const SizedBox(width: 8),
+                      Expanded(child: _statusCard('Daemon Process', _bgServiceRunning, Icons.run_circle_outlined)),
+                    ],
+                  ),
 
-                // Background Keep-Alive Helper Box
-                if (_showGuide) ...[
-                  const SizedBox(height: 10),
+                  if (_debug.lastError != null && _debug.lastError!.isNotEmpty) ...[
+                    const SizedBox(height: 10),
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: Colors.red.shade50,
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(color: Colors.red.shade200),
+                      ),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Icon(Icons.error_outline_rounded, color: Colors.red, size: 16),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: SelectableText(
+                              'Error: ${_debug.lastError}',
+                              style: TextStyle(fontSize: 11, color: Colors.red.shade900, fontFamily: 'monospace'),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          GestureDetector(
+                            onTap: () {
+                              setState(() {
+                                _debug.lastError = null;
+                              });
+                            },
+                            child: const Icon(Icons.close, size: 14, color: Colors.red),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+
+                  // Background Keep-Alive Helper Box
+                  if (_showGuide) ...[
+                    const SizedBox(height: 10),
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: Colors.amber.shade50,
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(color: Colors.amber.shade200),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                'Background Keep-Alive Guide',
+                                style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.amber.shade900),
+                              ),
+                              GestureDetector(
+                                onTap: () => setState(() => _showGuide = false),
+                                child: Icon(Icons.close, size: 14, color: Colors.amber.shade800),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'To prevent Android from killing the forwarding daemon when you swipe this app away from the recent apps menu:',
+                            style: TextStyle(fontSize: 10, color: Colors.amber.shade900, height: 1.35),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            '1. Lock the app in your phone Recents screen (Tap the app icon in Recents and choose Lock).\n2. Set Battery Usage to Unrestricted under Settings -> Apps -> Takapay -> Battery.',
+                            style: TextStyle(fontSize: 9.5, color: Colors.amber.shade900, fontWeight: FontWeight.w600, height: 1.35),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+
+                  const SizedBox(height: 12),
+                  // Counter Grid
                   Container(
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: Colors.amber.shade50,
-                      borderRadius: BorderRadius.circular(6),
-                      border: Border.all(color: Colors.amber.shade200),
+                      color: Colors.grey.shade50,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.grey.shade200),
                     ),
                     child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          mainAxisAlignment: MainAxisAlignment.spaceAround,
                           children: [
-                            Text(
-                              'Background Keep-Alive Guide',
-                              style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.amber.shade900),
-                            ),
-                            GestureDetector(
-                              onTap: () => setState(() => _showGuide = false),
-                              child: Icon(Icons.close, size: 14, color: Colors.amber.shade800),
+                            _counterColumn('Inbox Notif', _debug.totalNotificationsReceived, Colors.blue, Icons.notifications_active_rounded),
+                            _counterColumn('Parsed OK', _debug.totalNotificationsParsed, Colors.green, Icons.fact_check_rounded),
+                            _counterColumn('Ignored', _debug.totalParseSkipped, Colors.orange, Icons.next_plan_rounded),
+                          ],
+                        ),
+                        const Divider(height: 16),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceAround,
+                          children: [
+                            _counterColumn('Webhook Out', _debug.totalWebhooksSent, Colors.teal, Icons.cloud_done_rounded),
+                            _counterColumn('Failed', _debug.totalWebhooksFailed, Colors.red, Icons.cloud_off_rounded),
+                            Expanded(
+                              child: Column(
+                                children: [
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      const Icon(Icons.access_time_filled_rounded, size: 14, color: Colors.blueGrey),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        _debug.lastNotificationTime != null
+                                            ? DateFormat('HH:mm:ss').format(_debug.lastNotificationTime!)
+                                            : 'N/A',
+                                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.blueGrey),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 4),
+                                  const Text('Last Capture', style: TextStyle(fontSize: 9, color: Colors.grey, fontWeight: FontWeight.bold)),
+                                ],
+                              ),
                             ),
                           ],
                         ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'To prevent Android from killing the forwarding daemon when you swipe this app away from the recent apps menu:',
-                          style: TextStyle(fontSize: 10, color: Colors.amber.shade900, height: 1.35),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          '1. Lock the app in your phone Recents screen (Tap the app icon in Recents and choose Lock).\n2. Set Battery Usage to Unrestricted under Settings -> Apps -> Takapay -> Battery.',
-                          style: TextStyle(fontSize: 9.5, color: Colors.amber.shade900, fontWeight: FontWeight.w600, height: 1.35),
-                        ),
                       ],
                     ),
                   ),
-                ],
-
-                const SizedBox(height: 12),
-                // Counter Grid
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade50,
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.grey.shade200),
-                  ),
-                  child: Column(
+                  const SizedBox(height: 10),
+                  // Action row
+                  Row(
                     children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceAround,
-                        children: [
-                          _counterColumn('Inbox Notif', _debug.totalNotificationsReceived, Colors.blue, Icons.notifications_active_rounded),
-                          _counterColumn('Parsed OK', _debug.totalNotificationsParsed, Colors.green, Icons.fact_check_rounded),
-                          _counterColumn('Ignored', _debug.totalParseSkipped, Colors.orange, Icons.next_plan_rounded),
-                        ],
+                      Expanded(
+                        child: _quickActionButton(
+                          icon: Icons.search_rounded,
+                          label: 'OS Active List',
+                          color: Colors.blue,
+                          onPressed: _fetchActiveNotifications,
+                        ),
                       ),
-                      const Divider(height: 16),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceAround,
-                        children: [
-                          _counterColumn('Webhook Out', _debug.totalWebhooksSent, Colors.teal, Icons.cloud_done_rounded),
-                          _counterColumn('Failed', _debug.totalWebhooksFailed, Colors.red, Icons.cloud_off_rounded),
-                          Expanded(
-                            child: Column(
-                              children: [
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    const Icon(Icons.access_time_filled_rounded, size: 14, color: Colors.blueGrey),
-                                    const SizedBox(width: 4),
-                                    Text(
-                                      _debug.lastNotificationTime != null
-                                          ? DateFormat('HH:mm:ss').format(_debug.lastNotificationTime!)
-                                          : 'N/A',
-                                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.blueGrey),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 4),
-                                const Text('Last Capture', style: TextStyle(fontSize: 9, color: Colors.grey, fontWeight: FontWeight.bold)),
-                              ],
-                            ),
-                          ),
-                        ],
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: _quickActionButton(
+                          icon: Icons.power_settings_new_rounded,
+                          label: 'Reboot Daemon',
+                          color: Colors.teal,
+                          onPressed: _restartBackgroundService,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: _quickActionButton(
+                          icon: Icons.vpn_key_rounded,
+                          label: 'Grant Access',
+                          color: Colors.purple,
+                          onPressed: _requestPermission,
+                        ),
                       ),
                     ],
                   ),
-                ),
-                const SizedBox(height: 10),
-                // Action row
-                Row(
-                  children: [
-                    Expanded(
-                      child: _quickActionButton(
-                        icon: Icons.search_rounded,
-                        label: 'OS Active List',
-                        color: Colors.blue,
-                        onPressed: _fetchActiveNotifications,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: _quickActionButton(
-                        icon: Icons.power_settings_new_rounded,
-                        label: 'Reboot Daemon',
-                        color: Colors.teal,
-                        onPressed: _restartBackgroundService,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: _quickActionButton(
-                        icon: Icons.vpn_key_rounded,
-                        label: 'Grant Access',
-                        color: Colors.purple,
-                        onPressed: _requestPermission,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
+                ],
+              ),
             ),
           ),
           // Filter Chips Section
-          Container(
-            height: 44,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              border: Border(
-                top: BorderSide(color: Colors.grey.shade100),
-                bottom: BorderSide(color: Colors.grey.shade200),
+          SliverToBoxAdapter(
+            child: Container(
+              height: 44,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                border: Border(
+                  top: BorderSide(color: Colors.grey.shade100),
+                  bottom: BorderSide(color: Colors.grey.shade200),
+                ),
               ),
-            ),
-            child: ListView(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-              children: [
-                _filterChip('ALL', Icons.all_inclusive_rounded, Colors.grey.shade800),
-                _filterChip('ERRORS', Icons.error_outline_rounded, Colors.red),
-                _filterChip('SUCCESS', Icons.check_circle_outline_rounded, Colors.green),
-                _filterChip('SYSTEM', Icons.dns_rounded, Colors.indigo),
-                _filterChip('NOTIFICATION', Icons.notifications_none_rounded, Colors.blue),
-                _filterChip('PARSER', Icons.terminal_rounded, Colors.orange),
-                _filterChip('WEBHOOK', Icons.webhook_rounded, Colors.teal),
-                _filterChip('DATABASE', Icons.storage_rounded, Colors.deepPurple),
-                _filterChip('STATUS', Icons.network_check_rounded, Colors.blueGrey),
-                _filterChip('ACTION', Icons.touch_app_rounded, Colors.brown),
-              ],
+              child: ListView(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                children: [
+                  _filterChip('ALL', Icons.all_inclusive_rounded, Colors.grey.shade800),
+                  _filterChip('ERRORS', Icons.error_outline_rounded, Colors.red),
+                  _filterChip('SUCCESS', Icons.check_circle_outline_rounded, Colors.green),
+                  _filterChip('SYSTEM', Icons.dns_rounded, Colors.indigo),
+                  _filterChip('NOTIFICATION', Icons.notifications_none_rounded, Colors.blue),
+                  _filterChip('PARSER', Icons.terminal_rounded, Colors.orange),
+                  _filterChip('WEBHOOK', Icons.webhook_rounded, Colors.teal),
+                  _filterChip('DATABASE', Icons.storage_rounded, Colors.deepPurple),
+                  _filterChip('STATUS', Icons.network_check_rounded, Colors.blueGrey),
+                  _filterChip('ACTION', Icons.touch_app_rounded, Colors.brown),
+                ],
+              ),
             ),
           ),
           // Log console entries
           filteredLogs.isEmpty
-              ? Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 48.0),
-                  child: _emptyStateView(),
+              ? SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 48.0),
+                    child: _emptyStateView(),
+                  ),
                 )
-              : ListView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  padding: const EdgeInsets.only(bottom: 24),
-                  itemCount: filteredLogs.length,
-                  itemBuilder: (context, index) {
-                    final log = filteredLogs[index];
-                    return _logTile(log);
-                  },
+              : SliverList(
+                  delegate: SliverChildBuilderDelegate(
+                    (context, index) {
+                      final log = filteredLogs[index];
+                      return _logTile(log);
+                    },
+                    childCount: filteredLogs.length,
+                  ),
                 ),
         ],
       ),
@@ -586,15 +590,7 @@ class _DebugTabState extends State<DebugTab> {
   }
 
   String _stripEmojis(String input) {
-    try {
-      final emojiPattern = RegExp(
-        r'[\u{1F600}-\u{1F64F}]|[\u{1F300}-\u{1F5FF}]|[\u{1F680}-\u{1F6FF}]|[\u{1F1E0}-\u{1F1FF}]|[\u{2700}-\u{27BF}]|[\u{1F900}-\u{1F9FF}]|[\u{1F018}-\u{1F0F5}]|[\u{1F004}]|[\u{1F170}-\u{1F0C0}]|[\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\u{1F100}-\u{1F1FF}]|[\u{25AA}-\u{25AB}]|[\u{25B6}]|[\u{25C0}]|[\u{25FB}-\u{25FE}]|[\u{2B05}-\u{2B07}]|[\u{2B1B}-\u{2B1C}]|[\u{2B50}]|[\u{2B55}]|[\u{3030}]|[\u{303D}]|[\u{3297}]|[\u{3299}]|[\u{23E9}-\u{23EF}]|[\u{23F0}]|[\u{23F3}]',
-        unicode: true,
-      );
-      return input.replaceAll(emojiPattern, '').trim();
-    } catch (e) {
-      return input;
-    }
+    return input;
   }
 
   Widget _emptyStateView() {

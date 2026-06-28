@@ -86,11 +86,24 @@ class DebugLogger {
     }
   }
 
+  String _stripEmojis(String input) {
+    try {
+      final emojiPattern = RegExp(
+        r'[\u{1F600}-\u{1F64F}]|[\u{1F300}-\u{1F5FF}]|[\u{1F680}-\u{1F6FF}]|[\u{1F1E0}-\u{1F1FF}]|[\u{2700}-\u{27BF}]|[\u{1F900}-\u{1F9FF}]|[\u{1F018}-\u{1F0F5}]|[\u{1F004}]|[\u{1F170}-\u{1F0C0}]|[\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\u{1F100}-\u{1F1FF}]|[\u{25AA}-\u{25AB}]|[\u{25B6}]|[\u{25C0}]|[\u{25FB}-\u{25FE}]|[\u{2B05}-\u{2B07}]|[\u{2B1B}-\u{2B1C}]|[\u{2B50}]|[\u{2B55}]|[\u{3030}]|[\u{303D}]|[\u{3297}]|[\u{3299}]|[\u{23E9}-\u{23EF}]|[\u{23F0}]|[\u{23F3}]',
+        unicode: true,
+      );
+      return input.replaceAll(emojiPattern, '').trim();
+    } catch (e) {
+      return input;
+    }
+  }
+
   void log(String category, String message, {bool isError = false}) {
+    final cleanMessage = _stripEmojis(message);
     final entry = DebugLogEntry(
       timestamp: DateTime.now(),
       category: category,
-      message: message,
+      message: cleanMessage,
       isError: isError,
     );
     _logs.insert(0, entry);
@@ -100,15 +113,15 @@ class DebugLogger {
     _notifyListeners();
 
     // Async persist to SQLite
-    DatabaseHelper.instance.insertDebugLog(category, message, isError: isError).catchError((e) {
+    DatabaseHelper.instance.insertDebugLog(category, cleanMessage, isError: isError).catchError((e) {
       print('DebugLogger: Failed to save log to SQLite: $e');
       return 0;
     });
 
     if (isError) {
-      lastError = message;
+      lastError = cleanMessage;
       SharedPreferences.getInstance().then((prefs) {
-        prefs.setString('dbg_last_error', message);
+        prefs.setString('dbg_last_error', cleanMessage);
       });
     }
   }

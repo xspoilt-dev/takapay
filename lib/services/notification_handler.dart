@@ -17,6 +17,7 @@ class NotificationHandler {
   static StreamSubscription? _subscription;
   static bool _isListening = false;
   static final _debug = DebugLogger.instance;
+  static final StreamController<void> onTransactionCaptured = StreamController<void>.broadcast();
 
   NotificationHandler._();
 
@@ -104,16 +105,16 @@ class NotificationHandler {
         _debug.log('PARSER', 'Parsed transaction: ${record.sender} - ${record.amount} TK - TrxID: ${record.trxId}');
 
         try {
-          final String? errorReason = await WebhookService.sendPayload(record);
-          final bool success = errorReason == null;
+          final WebhookResult result = await WebhookService.sendPayload(record);
+          final bool success = result.isSuccess;
 
           if (success) {
             await _debug.incrementCounter('webhook_sent');
             _debug.log('WEBHOOK', 'Webhook sent successfully for TrxID: ${record.trxId}');
           } else {
             await _debug.incrementCounter('webhook_failed');
-            _debug.lastError = 'Webhook: $errorReason';
-            _debug.log('WEBHOOK', 'Webhook failed: $errorReason', isError: true);
+            _debug.lastError = 'Webhook: ${result.report}';
+            _debug.log('WEBHOOK', 'Webhook failed: ${result.report}', isError: true);
           }
 
           final finalRecord = TransactionRecord(
@@ -123,10 +124,12 @@ class NotificationHandler {
             rawBody: record.rawBody,
             timestamp: record.timestamp,
             status: success ? 'SUCCESS' : 'FAILED',
-            errorMessage: errorReason,
+            errorMessage: result.report,
+            senderNumber: record.senderNumber,
           );
 
           await DatabaseHelper.instance.insertTransaction(finalRecord);
+          onTransactionCaptured.add(null);
           _debug.log('DATABASE', 'Transaction saved to DB');
         } catch (e) {
           await _debug.incrementCounter('webhook_failed');

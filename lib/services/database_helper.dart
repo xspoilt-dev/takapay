@@ -20,7 +20,7 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 2,
+      version: 3,
       onCreate: _createDB,
       onUpgrade: _onUpgrade,
     );
@@ -36,7 +36,8 @@ CREATE TABLE transactions (
   raw_body TEXT NOT NULL,
   timestamp TEXT NOT NULL,
   status TEXT NOT NULL,
-  error_message TEXT
+  error_message TEXT,
+  sender_number TEXT
 )
 ''');
     await db.execute('''
@@ -61,6 +62,13 @@ CREATE TABLE IF NOT EXISTS debug_logs (
   is_error INTEGER NOT NULL DEFAULT 0
 )
 ''');
+    }
+    if (oldVersion < 3) {
+      try {
+        await db.execute('ALTER TABLE transactions ADD COLUMN sender_number TEXT');
+      } catch (e) {
+        print('Database migration error or column already exists: $e');
+      }
     }
   }
 

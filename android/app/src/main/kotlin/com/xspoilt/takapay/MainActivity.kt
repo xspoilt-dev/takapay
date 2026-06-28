@@ -25,6 +25,21 @@ class MainActivity : FlutterActivity() {
                 } catch (e: Exception) {
                     result.error("ERROR", e.message, null)
                 }
+            } else if (call.method == "dialNumber") {
+                val number = call.argument<String>("number")
+                if (number != null) {
+                    try {
+                        val intent = Intent(Intent.ACTION_DIAL)
+                        intent.data = android.net.Uri.parse("tel:$number")
+                        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        startActivity(intent)
+                        result.success(true)
+                    } catch (e: Exception) {
+                        result.error("ERROR", e.message, null)
+                    }
+                } else {
+                    result.error("BAD_ARGS", "Number is null", null)
+                }
             } else {
                 result.notImplemented()
             }

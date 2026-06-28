@@ -8,10 +8,8 @@ import io.flutter.plugin.common.MethodChannel
 
 class SmsReceiver : BroadcastReceiver() {
     companion object {
-        private var channel: MethodChannel? = null
-
         fun setMethodChannel(methodChannel: MethodChannel) {
-            channel = methodChannel
+            BackgroundProcessor.setMethodChannel(methodChannel)
         }
     }
 
@@ -19,15 +17,17 @@ class SmsReceiver : BroadcastReceiver() {
         if (intent.action == Telephony.Sms.Intents.SMS_RECEIVED_ACTION) {
             val messages = Telephony.Sms.Intents.getMessagesFromIntent(intent)
             for (sms in messages) {
-                val body = sms.displayMessageBody
-                val sender = sms.displayOriginatingAddress
+                val body = sms.displayMessageBody ?: ""
+                val sender = sms.displayOriginatingAddress ?: ""
 
-                val data = mapOf(
-                    "sender" to sender,
-                    "body" to body
+                BackgroundProcessor.saveDebugLogToDb(
+                    context,
+                    "SMS_NATIVE",
+                    "Received SMS from: $sender",
+                    false
                 )
-                
-                channel?.invokeMethod("onMessageReceived", data)
+
+                BackgroundProcessor.processIncomingSms(context, sender, body)
             }
         }
     }
