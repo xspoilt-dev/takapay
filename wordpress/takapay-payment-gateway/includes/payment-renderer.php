@@ -2,8 +2,6 @@
 
 defined('ABSPATH') || exit;
 
-add_shortcode('takapay_payment_page', 'takapay_pg_render_payment_page');
-
 function takapay_pg_get_provider_label($id)
 {
     $labels = [
@@ -27,31 +25,27 @@ function takapay_pg_get_provider_config($id)
 
 function takapay_pg_get_default_instructions($provider_id, $number, $amount)
 {
-    $amount_fmt = number_format($amount, 2);
-
-    $templates = [
-        'bkash' => "Go to your bKash Mobile App.\n\nChoose \"Send Money\"\n\nEnter the Number: {number}\n\nEnter the Amount: {amount} BDT\n\nNow enter your bKash PIN to confirm.\n\nPut the Transaction ID in the box below and press Verify.",
-        'nagad' => "Go to your Nagad Mobile App.\n\nChoose \"Send Money\"\n\nEnter the Number: {number}\n\nEnter the Amount: {amount} BDT\n\nNow enter your Nagad PIN to confirm.\n\nPut the Transaction ID in the box below and press Verify.",
-        'rocket' => "Go to your Rocket Mobile App.\n\nChoose \"Send Money\"\n\nEnter the Number: {number}\n\nEnter the Amount: {amount} BDT\n\nNow enter your Rocket PIN to confirm.\n\nPut the Transaction ID in the box below and press Verify.",
-    ];
-
-    $template = $templates[$provider_id] ?? "Send {amount} BDT to {number}.\n\nEnter the Transaction ID below and press Verify.";
-
-    $custom = get_option('takapay_pg_provider_instructions', []);
-    if (!empty($custom[$provider_id])) {
-        $template = $custom[$provider_id];
+    $default = "Go to your {platform} Mobile App.\n\nChoose \"Send Money\"\n\nEnter the Number: {number}\n\nEnter the Amount: {amount} BDT\n\nNow enter your PIN to confirm.\n\nPut the Transaction ID in the box below and press Verify.";
+    $template = get_option('takapay_pg_instructions', $default);
+    if (empty($template)) {
+        $template = $default;
     }
-
-    return str_replace(['{number}', '{amount}'], [$number, $amount_fmt], $template);
+    
+    $provider_config = takapay_pg_get_provider_config($provider_id);
+    $platform = $provider_config['label'] ?? takapay_pg_get_provider_label($provider_id);
+    
+    $amount_fmt = number_format($amount, 2);
+    
+    return str_replace(
+        ['{platform}', '{number}', '{amount}'],
+        [$platform, $number, $amount_fmt],
+        $template
+    );
 }
 
 function takapay_pg_render_payment_page($atts)
 {
-    $atts = shortcode_atts([
-        'amount'  => '',
-        'title'   => '',
-    ], $atts, 'takapay_payment_page');
-
+    // Parse attributes from GET/POST or defaults
     $amount = !empty($_POST['takapay_pg_amount'])
         ? floatval($_POST['takapay_pg_amount'])
         : (!empty($atts['amount']) ? floatval($atts['amount']) : 0);
@@ -70,7 +64,8 @@ function takapay_pg_render_payment_page($atts)
         return takapay_pg_render_instructions($provider, $amount, $trx_id, $verifying);
     }
 
-    return takapay_pg_render_checkout_form($amount, $atts['title']);
+    $title = !empty($atts['title']) ? $atts['title'] : '';
+    return takapay_pg_render_checkout_form($amount, $title);
 }
 
 function takapay_pg_render_checkout_form($preset_amount, $title)
@@ -81,8 +76,8 @@ function takapay_pg_render_checkout_form($preset_amount, $title)
     ?>
     <div class="takapay-pg-wrap">
         <style>
-            .takapay-pg-wrap { max-width: 480px; margin: 0 auto; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
-            .takapay-pg-wrap h2 { margin-bottom: 1em; }
+            .takapay-pg-wrap { max-width: 480px; margin: 0 auto; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; width: 100%; }
+            .takapay-pg-wrap h2 { margin-bottom: 1em; text-align: center; }
             .takapay-pg-form .takapay-pg-field { margin-bottom: 1.25em; }
             .takapay-pg-form label { display: block; font-weight: 600; margin-bottom: 0.4em; color: #333; }
             .takapay-pg-form select, .takapay-pg-form input[type="number"] {
@@ -116,7 +111,7 @@ function takapay_pg_render_checkout_form($preset_amount, $title)
                 </div>
             <?php else: ?>
                 <input type="hidden" name="takapay_pg_amount" value="<?php echo esc_attr($preset_amount); ?>">
-                <div class="takapay-pg-field" style="font-size: 1.15em; padding: 0.6em 0;">
+                <div class="takapay-pg-field" style="font-size: 1.15em; padding: 0.6em 0; text-align: center;">
                     <strong>Amount:</strong> <?php echo esc_html(number_format($preset_amount, 2)); ?> BDT
                 </div>
             <?php endif; ?>
@@ -140,9 +135,9 @@ function takapay_pg_render_instructions($provider, $amount, $trx_id, $verifying)
     ?>
     <div class="takapay-pg-wrap">
         <style>
-            .takapay-pg-wrap { max-width: 520px; margin: 0 auto; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
-            .takapay-pg-card { background: #fff; border: 1px solid #e0e0e0; border-radius: 10px; padding: 1.5em; }
-            .takapay-pg-amount { font-size: 2em; font-weight: 700; color: #2271b1; margin: 0.3em 0 0.6em; }
+            .takapay-pg-wrap { max-width: 520px; margin: 0 auto; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; width: 100%; }
+            .takapay-pg-card { background: #fff; border: 1px solid #e0e0e0; border-radius: 10px; padding: 1.5em; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+            .takapay-pg-amount { font-size: 2em; font-weight: 700; color: #2271b1; margin: 0.3em 0 0.6em; text-align: center; }
             .takapay-pg-provider-badge {
                 display: inline-block; background: #e8f0fe; color: #2271b1;
                 padding: 0.3em 0.9em; border-radius: 20px; font-weight: 600; font-size: 0.9em;

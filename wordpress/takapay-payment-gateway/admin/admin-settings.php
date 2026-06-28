@@ -40,7 +40,7 @@ function takapay_pg_register_settings()
 {
     register_setting('takapay_pg_settings', 'takapay_pg_secret');
     register_setting('takapay_pg_settings', 'takapay_pg_providers');
-    register_setting('takapay_pg_settings', 'takapay_pg_provider_instructions');
+    register_setting('takapay_pg_settings', 'takapay_pg_instructions');
     register_setting('takapay_pg_settings', 'takapay_pg_return_url');
     register_setting('takapay_pg_settings', 'takapay_pg_auto_verify');
 
@@ -73,7 +73,7 @@ function takapay_pg_render_settings_page()
 
     $secret       = get_option('takapay_pg_secret', '');
     $providers    = get_option('takapay_pg_providers', []);
-    $instructions = get_option('takapay_pg_provider_instructions', []);
+    $instructions = get_option('takapay_pg_instructions', '');
     $return_url   = get_option('takapay_pg_return_url', '');
 
     if (isset($_GET['regenerate_secret']) && check_admin_referer('takapay_pg_regenerate_secret')) {
@@ -86,9 +86,21 @@ function takapay_pg_render_settings_page()
         $id = sanitize_key($_POST['provider_id'] ?? '');
         $label = sanitize_text_field($_POST['provider_label'] ?? '');
         if (!empty($id) && !empty($label)) {
-            $providers[] = ['id' => $id, 'label' => $label, 'number' => ''];
-            update_option('takapay_pg_providers', $providers);
-            echo '<div class="notice notice-success is-dismissible"><p>Provider added.</p></div>';
+            // Check if provider ID already exists
+            $exists = false;
+            foreach ($providers as $p) {
+                if (($p['id'] ?? '') === $id) {
+                    $exists = true;
+                    break;
+                }
+            }
+            if (!$exists) {
+                $providers[] = ['id' => $id, 'label' => $label, 'number' => ''];
+                update_option('takapay_pg_providers', $providers);
+                echo '<div class="notice notice-success is-dismissible"><p>Provider added.</p></div>';
+            } else {
+                echo '<div class="notice notice-error is-dismissible"><p>Provider ID already exists.</p></div>';
+            }
         }
     }
 
@@ -100,12 +112,6 @@ function takapay_pg_render_settings_page()
     }
 
     $webhook_url = rest_url('takapay/v1/webhook');
-
-    $default_instructions = [
-        'bkash'  => "Go to your bKash Mobile App.\n\nChoose \"Send Money\"\n\nEnter the Number: {number}\n\nEnter the Amount: {amount} BDT\n\nNow enter your bKash PIN to confirm.\n\nPut the Transaction ID in the box below and press Verify.",
-        'nagad'  => "Go to your Nagad Mobile App.\n\nChoose \"Send Money\"\n\nEnter the Number: {number}\n\nEnter the Amount: {amount} BDT\n\nNow enter your Nagad PIN to confirm.\n\nPut the Transaction ID in the box below and press Verify.",
-        'rocket' => "Go to your Rocket Mobile App.\n\nChoose \"Send Money\"\n\nEnter the Number: {number}\n\nEnter the Amount: {amount} BDT\n\nNow enter your Rocket PIN to confirm.\n\nPut the Transaction ID in the box below and press Verify.",
-    ];
     ?>
     <div class="wrap">
         <h1>Takapay Payment Settings</h1>
@@ -175,38 +181,24 @@ function takapay_pg_render_settings_page()
                         <p class="description">Set the account number where customers should send payments for each provider.</p>
                     </td>
                 </tr>
-
-                <tr>
-                    <th scope="row">Add Provider</th>
-                    <td>
-                        <form method="post" style="display:flex; gap:0.5em; align-items:center;">
-                            <?php wp_nonce_field('takapay_pg_add_provider'); ?>
-                            <input type="text" name="provider_id" placeholder="ID (e.g. bkash)" style="width:120px;" required>
-                            <input type="text" name="provider_label" placeholder="Label (e.g. bKash)" style="width:120px;" required>
-                            <input type="submit" name="add_provider" class="button button-secondary" value="Add Provider">
-                        </form>
-                        <p class="description">Add new payment providers. bKash, Nagad, and Rocket are pre-configured on activation.</p>
-                    </td>
-                </tr>
             </table>
 
-            <h2 style="margin-top: 1.5em;">Provider Instructions</h2>
-            <p>Customize the payment instructions shown to customers. Use <code>{number}</code> for the account number and <code>{amount}</code> for the payment amount.</p>
+            <h2 style="margin-top: 1.5em;">Payment Instructions</h2>
             <table class="form-table" role="presentation">
-                <?php foreach ($providers as $p):
-                    $pid    = $p['id'] ?? '';
-                    $label  = $p['label'] ?? $pid;
-                    $custom = $instructions[$pid] ?? '';
-                    $default = $default_instructions[$pid] ?? "Send {amount} BDT to {number}.\n\nEnter the Transaction ID below and press Verify.";
-                ?>
                 <tr>
-                    <th scope="row"><?php echo esc_html($label); ?> Instructions</th>
+                    <th scope="row">Global Template</th>
                     <td>
-                        <textarea name="takapay_pg_provider_instructions[<?php echo esc_attr($pid); ?>]" rows="6" class="large-text" placeholder="<?php echo esc_attr($default); ?>"><?php echo esc_textarea($custom); ?></textarea>
-                        <p class="description">Leave empty to use the default template. Placeholders: <code>{number}</code>, <code>{amount}</code>.</p>
+                        <?php
+                        $default_instructions = "Go to your {platform} Mobile App.\n\nChoose \"Send Money\"\n\nEnter the Number: {number}\n\nEnter the Amount: {amount} BDT\n\nNow enter your PIN to confirm.\n\nPut the Transaction ID in the box below and press Verify.";
+                        $custom_instructions = get_option('takapay_pg_instructions', $default_instructions);
+                        if (empty($custom_instructions)) {
+                            $custom_instructions = $default_instructions;
+                        }
+                        ?>
+                        <textarea name="takapay_pg_instructions" rows="6" class="large-text" placeholder="<?php echo esc_attr($default_instructions); ?>"><?php echo esc_textarea($custom_instructions); ?></textarea>
+                        <p class="description">Customize the payment instructions shown to customers. Available placeholders: <code>{platform}</code> (e.g. bKash), <code>{amount}</code> (payment amount), <code>{number}</code> (account number).</p>
                     </td>
                 </tr>
-                <?php endforeach; ?>
             </table>
 
             <h2 style="margin-top: 1.5em;">General</h2>
@@ -227,17 +219,66 @@ function takapay_pg_render_settings_page()
 
         <hr>
 
-        <h2>Shortcode</h2>
-        <p>Place this shortcode on any page to display the payment flow:</p>
-        <p><code>[takapay_payment_page amount="500"]</code></p>
-        <p>If your checkout form POSTs to this page, include <code>takapay_pg_amount</code> and <code>takapay_pg_provider</code> in the POST body.</p>
-        <p>Example form action:</p>
-        <pre style="background:#f5f5f5;padding:1em;border-radius:4px;">&lt;form action="&lt;?php echo esc_url(get_permalink($payment_page_id)); ?&gt;" method="post"&gt;
+        <h2>Add Payment Provider</h2>
+        <form method="post" action="" style="display:flex; gap:0.5em; align-items:center; background:#fff; padding:15px; border:1px solid #ccd0d4; border-radius:4px; max-width:600px;">
+            <?php wp_nonce_field('takapay_pg_add_provider'); ?>
+            <div>
+                <label style="display:block; font-weight:600; margin-bottom:4px;">Provider ID (e.g. bkash)</label>
+                <input type="text" name="provider_id" placeholder="e.g. bkash" style="width:150px;" required>
+            </div>
+            <div>
+                <label style="display:block; font-weight:600; margin-bottom:4px;">Provider Label (e.g. bKash)</label>
+                <input type="text" name="provider_label" placeholder="e.g. bKash" style="width:150px;" required>
+            </div>
+            <div style="align-self:flex-end;">
+                <input type="submit" name="add_provider" class="button button-secondary" value="Add Provider">
+            </div>
+        </form>
+        <p class="description">Add new payment providers. bKash, Nagad, and Rocket are pre-configured on activation.</p>
+
+        <hr>
+
+        <h2>Demo Payment</h2>
+        <p>Test the direct payment route by launching a demo payment screen with mock data in a new tab.</p>
+        <form method="post" action="<?php echo esc_url(home_url('/takapay-pay/')); ?>" target="_blank" style="background:#fff; padding:15px; border:1px solid #ccd0d4; border-radius:4px; max-width:600px; display:flex; gap:1em; align-items:center;">
+            <div>
+                <label style="display:block; font-weight:600; margin-bottom:4px;">Demo Amount (BDT)</label>
+                <input type="number" name="takapay_pg_amount" value="550.00" step="0.01" style="width:120px;" required>
+            </div>
+            <div>
+                <label style="display:block; font-weight:600; margin-bottom:4px;">Demo Provider</label>
+                <select name="takapay_pg_provider" required style="width:150px;">
+                    <?php if (empty($providers)): ?>
+                        <option value="bkash">bKash (Demo)</option>
+                    <?php else: ?>
+                        <?php foreach ($providers as $p): ?>
+                            <option value="<?php echo esc_attr($p['id']); ?>"><?php echo esc_html($p['label']); ?></option>
+                        <?php endforeach; ?>
+                    <?php endif; ?>
+                </select>
+            </div>
+            <div style="align-self:flex-end;">
+                <button type="submit" class="button button-primary">Open Demo Payment</button>
+            </div>
+        </form>
+
+        <hr>
+
+        <h2>Direct Payment Route</h2>
+        <p>Instead of creating a WordPress page and using shortcodes, the plugin serves a dedicated payment route directly at:</p>
+        <p><code><a href="<?php echo esc_url(home_url('/takapay-pay/')); ?>" target="_blank"><?php echo esc_url(home_url('/takapay-pay/')); ?></a></code></p>
+        
+        <p>You can send a <strong>POST</strong> request directly to this URL to render the payment flow (ideal for custom checkout forms or external applications like mobile apps). The POST body should contain <code>takapay_pg_amount</code> and <code>takapay_pg_provider</code>.</p>
+        
+        <p>Example form action POSTing to the direct route:</p>
+        <pre style="background:#f5f5f5;padding:1em;border-radius:4px;">&lt;form action="&lt;?php echo esc_url(home_url('/takapay-pay/')); ?&gt;" method="post"&gt;
     &lt;input type="hidden" name="takapay_pg_amount" value="99.00"&gt;
     &lt;input type="hidden" name="takapay_pg_provider" value="bkash"&gt;
     &lt;button type="submit"&gt;Pay with bKash&lt;/button&gt;
 &lt;/form&gt;</pre>
-        <p>You can also let the plugin show a provider selection form by simply visiting the shortcode page without POST data.</p>
+
+        <p>You can also access the payment page via a <strong>GET</strong> request with URL parameters to pre-fill options (e.g. <code>amount</code> and <code>title</code>):</p>
+        <p><code><a href="<?php echo esc_url(add_query_arg(array('amount' => '500', 'title' => 'Order Payment'), home_url('/takapay-pay/'))); ?>" target="_blank"><?php echo esc_url(add_query_arg(array('amount' => '500', 'title' => 'Order Payment'), home_url('/takapay-pay/'))); ?></a></code></p>
     </div>
     <?php
 }

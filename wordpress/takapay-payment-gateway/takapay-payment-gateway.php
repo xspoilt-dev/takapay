@@ -58,7 +58,8 @@ function takapay_pg_deactivate()
 
 require_once TAKAPAY_PG_PATH . 'includes/database.php';
 require_once TAKAPAY_PG_PATH . 'includes/webhook-handler.php';
-require_once TAKAPAY_PG_PATH . 'includes/shortcodes.php';
+require_once TAKAPAY_PG_PATH . 'includes/payment-renderer.php';
+require_once TAKAPAY_PG_PATH . 'includes/payment-route.php';
 
 if (is_admin()) {
     require_once TAKAPAY_PG_PATH . 'admin/admin-settings.php';
